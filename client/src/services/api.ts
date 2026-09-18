@@ -19,9 +19,18 @@ export const setAuthToken = (token: string | null) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message =
-      error.response?.data?.error?.message ?? error.message ?? "Request failed";
+  (error: unknown) => {
+    let message = "Request failed";
+
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as
+        { error?: { message?: string } } | undefined;
+
+      message = responseData?.error?.message ?? error.message ?? message;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
+
     return Promise.reject(new Error(message));
   },
 );

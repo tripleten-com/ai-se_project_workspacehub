@@ -44,31 +44,33 @@ export const FeatureFlagsPage = () => {
       />
       <div className="rounded-[20px] bg-white p-8 shadow-sm">
         <ul className="space-y-4">
-          {Object.entries(flags).map(([flagKey, enabled]) => (
-            <li
-              className="flex items-center justify-between rounded-[12px] border border-slate-200 p-[18px]"
-              key={flagKey}
-            >
-              <div>
-                <p className="text-xl font-semibold text-ink">
-                  {flagKey.replace(/([A-Z])/g, " $1")}
-                </p>
-                <p className="text-[13px] text-slate-500">
-                  Toggle organization access for this feature area.
-                </p>
-              </div>
-              <Checkbox
-                checked={enabled}
-                disabled={!canEdit}
-                onChange={(checked) =>
-                  setFlags((current) => ({
-                    ...current,
-                    [flagKey]: checked,
-                  }))
-                }
-              />
-            </li>
-          ))}
+          {(Object.entries(flags) as [keyof FeatureFlags, boolean][]).map(
+            ([flagKey, enabled]) => (
+              <li
+                className="flex items-center justify-between rounded-[12px] border border-slate-200 p-[18px]"
+                key={flagKey}
+              >
+                <div>
+                  <p className="text-xl font-semibold text-ink">
+                    {flagKey.replace(/([A-Z])/g, " $1")}
+                  </p>
+                  <p className="text-[13px] text-slate-500">
+                    Toggle organization access for this feature area.
+                  </p>
+                </div>
+                <Checkbox
+                  checked={enabled}
+                  disabled={!canEdit}
+                  onChange={(checked) =>
+                    setFlags((current) => ({
+                      ...current,
+                      [flagKey]: checked,
+                    }))
+                  }
+                />
+              </li>
+            ),
+          )}
         </ul>
         {status ? (
           <p className="mt-4 text-sm text-slate-600">{status}</p>

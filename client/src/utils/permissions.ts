@@ -28,6 +28,10 @@ export const canEditBooking = (user: User | null, booking: Booking) => {
   return isPrivilegedRole(user.role) || user._id === booking.createdBy;
 };
 
+export const canCreateProject = (user: User | null) => {
+  return isPrivilegedRole(user?.role);
+};
+
 export const canDeleteResources = (user: User | null) => {
   return isPrivilegedRole(user?.role);
 };
