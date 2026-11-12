@@ -37,7 +37,7 @@ export const OrganizationSettingsPage = () => {
       />
       <form
         className="rounded-3xl bg-white p-6 shadow-sm"
-        onSubmit={handleSubmit}
+        onSubmit={(event) => void handleSubmit(event)}
       >
         <div className="space-y-4">
           <input

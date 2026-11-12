@@ -21,5 +21,15 @@ export const errorHandler = (
     return sendError(res, "Resource not found", 404);
   }
 
+  if (
+    error instanceof SyntaxError &&
+    "status" in error &&
+    error.status === 400 &&
+    "type" in error &&
+    error.type === "entity.parse.failed"
+  ) {
+    return sendError(res, "Invalid JSON request body", 400);
+  }
+
   return sendError(res, "Internal server error", 500);
 };

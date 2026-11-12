@@ -12,6 +12,6 @@ coverage
 .swp
 
 .env
-
-
+notes.md
+atlas-credentials.env
 

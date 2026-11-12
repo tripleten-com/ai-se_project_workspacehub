@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import morgan from "morgan";
+import { connectToDatabase } from "./config/database";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFound";
@@ -10,8 +11,9 @@ import organizationRoutes from "./routes/organizationRoutes";
 import projectRoutes from "./routes/projectRoutes";
 import taskRoutes from "./routes/taskRoutes";
 import userRoutes from "./routes/userRoutes";
+import { asyncHandler } from "./utils/asyncHandler";
 
-export const app = express();
+const app = express();
 
 app.use(
   cors({
@@ -31,6 +33,13 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+app.use(
+  asyncHandler(async (_req, _res, next) => {
+    await connectToDatabase();
+    next();
+  }),
+);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/organizations", organizationRoutes);
 app.use("/api/users", userRoutes);
@@ -40,3 +49,5 @@ app.use("/api/bookings", bookingRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+export = app;

@@ -1,11 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { StatusPanel } from "../components/StatusPanel";
+import { TaskComments } from "../components/TaskComments";
 import { useAuth } from "../hooks/useAuth";
 import { projectService } from "../services/projectService";
 import { taskService } from "../services/taskService";
 import { userService } from "../services/userService";
-import type { Project, Task, User } from "../types/models";
+import type {
+  Project,
+  Task,
+  TaskWithCommentCount,
+  User,
+} from "../types/models";
 import { formatDateInput } from "../utils/date";
 import {
   canDeleteResources,
@@ -45,7 +51,7 @@ export const TasksPage = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskWithCommentCount[]>([]);
   const [taskEdits, setTaskEdits] = useState<Record<string, TaskFormState>>({});
   const [createState, setCreateState] = useState<TaskFormState>({
     projectId: "",
@@ -108,7 +114,7 @@ export const TasksPage = () => {
         dueDate: createState.dueDate || null,
       });
 
-      setTasks((current) => [createdTask, ...current]);
+      setTasks((current) => [{ ...createdTask, commentCount: 0 }, ...current]);
       setTaskEdits((current) => ({
         ...current,
         [createdTask._id]: buildTaskFormState(createdTask),
@@ -156,7 +162,11 @@ export const TasksPage = () => {
       });
 
       setTasks((current) =>
-        current.map((task) => (task._id === taskId ? updatedTask : task)),
+        current.map((task) =>
+          task._id === taskId
+            ? { ...updatedTask, commentCount: task.commentCount }
+            : task,
+        ),
       );
       setTaskEdits((current) => ({
         ...current,
@@ -207,7 +217,7 @@ export const TasksPage = () => {
       <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <form
           className="rounded-3xl bg-white p-6 shadow-sm"
-          onSubmit={handleCreate}
+          onSubmit={(event) => void handleCreate(event)}
         >
           <h2 className="text-xl font-semibold text-ink">Create task</h2>
           <div className="mt-4 space-y-4">
@@ -366,11 +376,7 @@ export const TasksPage = () => {
                         className={`${selectClassName} disabled:bg-slate-100`}
                         disabled={!canEdit}
                         onChange={(event) =>
-                          handleTaskEdit(
-                            task._id,
-                            "status",
-                            event.target.value,
-                          )
+                          handleTaskEdit(task._id, "status", event.target.value)
                         }
                         style={selectCaretStyle}
                         value={formState?.status ?? task.status}
@@ -455,6 +461,11 @@ export const TasksPage = () => {
                           Delete
                         </button>
                       ) : null}
+                      <TaskComments
+                        commentCount={task.commentCount}
+                        taskId={task._id}
+                        users={users}
+                      />
                     </div>
                   </article>
                 </li>

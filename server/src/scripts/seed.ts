@@ -1,16 +1,19 @@
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "../config/database";
 import { Booking } from "../models/Booking";
+import { Comment } from "../models/Comment";
 import { Organization } from "../models/Organization";
 import { Project } from "../models/Project";
 import { Task } from "../models/Task";
 import { User } from "../models/User";
+import { deleteTask } from "../services/taskService";
 
 const seed = async () => {
   await connectToDatabase();
 
   await Promise.all([
     Booking.deleteMany({}),
+    Comment.deleteMany({}),
     Task.deleteMany({}),
     Project.deleteMany({}),
     User.deleteMany({}),
@@ -72,7 +75,7 @@ const seed = async () => {
     },
   ]);
 
-  await Task.create([
+  const tasks = await Task.create([
     {
       organizationId: organization._id,
       projectId: projectOne._id,
@@ -82,6 +85,7 @@ const seed = async () => {
       priority: "medium",
       assignedTo: member._id,
       dueDate: new Date("2026-04-08T17:00:00.000Z"),
+      createdAt: new Date("2026-04-24T12:00:00.000Z"),
     },
     {
       organizationId: organization._id,
@@ -92,6 +96,7 @@ const seed = async () => {
       priority: "high",
       assignedTo: admin._id,
       dueDate: new Date("2026-04-10T16:00:00.000Z"),
+      createdAt: new Date("2026-04-23T12:00:00.000Z"),
     },
     {
       organizationId: organization._id,
@@ -102,6 +107,7 @@ const seed = async () => {
       priority: "high",
       assignedTo: owner._id,
       dueDate: new Date("2026-04-12T18:00:00.000Z"),
+      createdAt: new Date("2026-04-22T12:00:00.000Z"),
     },
     {
       organizationId: organization._id,
@@ -112,6 +118,7 @@ const seed = async () => {
       priority: "low",
       assignedTo: member._id,
       dueDate: new Date("2026-04-04T15:00:00.000Z"),
+      createdAt: new Date("2026-04-21T12:00:00.000Z"),
     },
     {
       organizationId: organization._id,
@@ -122,8 +129,77 @@ const seed = async () => {
       priority: "medium",
       assignedTo: owner._id,
       dueDate: new Date("2026-04-15T19:00:00.000Z"),
+      createdAt: new Date("2026-04-20T12:00:00.000Z"),
     },
   ]);
+
+  await Comment.create([
+    {
+      organizationId: organization._id,
+      taskId: tasks[0]._id,
+      authorId: owner._id,
+      content: "I will review the current navigation patterns.",
+    },
+    {
+      organizationId: organization._id,
+      taskId: tasks[0]._id,
+      authorId: admin._id,
+      content: "Please include the mobile navigation in the audit.",
+    },
+    {
+      organizationId: organization._id,
+      taskId: tasks[0]._id,
+      authorId: member._id,
+      content: "I found two outdated links to document.",
+    },
+  ]);
+
+  const [temporaryAuthor] = await User.create([
+    {
+      firstName: "Temporary",
+      lastName: "Contributor",
+      email: "temporary-contributor@workspacehub.dev",
+      passwordHash,
+      organizationId: organization._id,
+      role: "member",
+    },
+  ]);
+
+  await Comment.create({
+    organizationId: organization._id,
+    taskId: tasks[0]._id,
+    authorId: temporaryAuthor._id,
+    content: "This comment remains after the contributor is removed.",
+  });
+  await User.deleteOne({ _id: temporaryAuthor._id });
+
+  const [ghostTask] = await Task.create([
+    {
+      organizationId: organization._id,
+      projectId: projectOne._id,
+      title: "Temporary task for orphan comment test",
+      description: "This task is removed after its comment is created.",
+      status: "todo",
+      priority: "low",
+      assignedTo: owner._id,
+      dueDate: null,
+    },
+  ]);
+
+  await Comment.create({
+    organizationId: organization._id,
+    taskId: ghostTask._id,
+    authorId: owner._id,
+    content: "This comment will temporarily reference a deleted task.",
+  });
+  await deleteTask(
+    {
+      userId: String(owner._id),
+      organizationId: String(organization._id),
+      role: "owner",
+    },
+    String(ghostTask._id),
+  );
 
   await Booking.create([
     {

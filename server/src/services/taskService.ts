@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { Comment } from "../models/Comment";
 import { Project } from "../models/Project";
 import { Task } from "../models/Task";
 import { User } from "../models/User";
@@ -43,7 +44,25 @@ const ensureAssigneeInOrganization = async (
 
 export const listTasks = async (organizationId: string, projectId?: string) => {
   const query = projectId ? { organizationId, projectId } : { organizationId };
-  return Task.find(query).sort({ createdAt: -1 });
+  const tasks = await Task.find(query).sort({ createdAt: -1 });
+  const taskIds = tasks.map((task) => task._id);
+  const comments = taskIds.length
+    ? await Comment.find(
+        { organizationId, taskId: { $in: taskIds } },
+        { taskId: 1 },
+      ).lean()
+    : [];
+  const commentCounts = new Map<string, number>();
+
+  for (const comment of comments) {
+    const taskId = String(comment.taskId);
+    commentCounts.set(taskId, (commentCounts.get(taskId) ?? 0) + 1);
+  }
+
+  return tasks.map((task) => ({
+    ...task.toObject(),
+    commentCount: commentCounts.get(String(task._id)) ?? 0,
+  }));
 };
 
 export const createTask = async (
@@ -167,5 +186,9 @@ export const deleteTask = async (actor: AuthPayload, id: string) => {
   }
 
   await task.deleteOne();
+  await Comment.deleteMany({
+    organizationId: actor.organizationId,
+    taskId: task._id,
+  });
   return { deleted: true };
 };

@@ -24,5 +24,14 @@ export const formatDateTimeInput = (value: string | null | undefined) => {
     return "";
   }
 
-  return new Date(value).toISOString().slice(0, 16);
+  // datetime-local inputs expect local wall-clock time, not UTC.
+  const date = new Date(value);
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+
+  return `${formatDateInput(value)}T${hours}:${minutes}`;
+};
+
+export const toIsoDateTime = (localValue: string) => {
+  return new Date(localValue).toISOString();
 };

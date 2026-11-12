@@ -128,7 +128,7 @@ export const ProjectDetailsPage = () => {
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <form
           className="rounded-3xl bg-white p-6 shadow-sm"
-          onSubmit={handleSave}
+          onSubmit={(event) => void handleSave(event)}
         >
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-ink">Project settings</h2>
@@ -193,9 +193,7 @@ export const ProjectDetailsPage = () => {
                     <article className="rounded-2xl border border-slate-200 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="font-medium text-ink">
-                            {task.title}
-                          </h3>
+                          <h3 className="font-medium text-ink">{task.title}</h3>
                           <p className="mt-1 text-sm text-slate-500">
                             {task.description}
                           </p>

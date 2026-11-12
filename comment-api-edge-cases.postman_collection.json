@@ -1,0 +1,621 @@
+{
+  "info": {
+    "_postman_id": "dc2cb4bc-25db-4636-8aaf-97bc882c1011",
+    "name": "WorkspaceHub Comment API Edge Cases",
+    "description": "Unexpected-input checks for comment create, update, and read/delete routes. Permission denials are covered in the separate authorization collection. Requests run sequentially; the final request cleans up the valid test comment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001/api",
+      "type": "string"
+    },
+    { "key": "ownerToken", "value": "", "type": "string" },
+    { "key": "ownerId", "value": "", "type": "string" },
+    { "key": "organizationId", "value": "", "type": "string" },
+    { "key": "taskId", "value": "", "type": "string" },
+    { "key": "commentId", "value": "", "type": "string" },
+    {
+      "key": "updatedContent",
+      "value": "Valid content accepted after rejecting malformed bodies.",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Login as owner",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"owner@workspacehub.dev\",\n  \"password\": \"Password123!\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: login succeeds and stores identity/token', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const data = pm.response.json().data;",
+              "  pm.collectionVariables.set('ownerToken', data.token);",
+              "  pm.collectionVariables.set('ownerId', data.user._id);",
+              "  pm.collectionVariables.set('organizationId', data.user.organizationId);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Get a task ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "url": "{{baseUrl}}/tasks"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: tasks load and first task ID is saved', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const tasks = pm.response.json().data;",
+              "  pm.expect(tasks.length).to.be.above(0);",
+              "  pm.collectionVariables.set('taskId', tasks[0]._id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Create without content",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: missing content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Create with empty content",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":\"\"}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: empty content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Create with whitespace-only content",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":\"   \"}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: whitespace-only content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Create with numeric content",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":123}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: non-string content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Create with null content",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":null}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: null content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Create with JSON null body",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "null",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: a null request body is rejected cleanly with 400, not 500', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Create valid comment with spoofed relationship fields",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Valid edge-case test comment.\",\n  \"authorId\": \"000000000000000000000001\",\n  \"organizationId\": \"000000000000000000000002\",\n  \"taskId\": \"000000000000000000000003\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: extra relationship fields are ignored; server uses authenticated owner and URL task', function () {",
+              "  pm.response.to.have.status(201);",
+              "  const comment = pm.response.json().data;",
+              "  pm.expect(comment.authorId).to.eql(pm.collectionVariables.get('ownerId'));",
+              "  pm.expect(comment.organizationId).to.eql(pm.collectionVariables.get('organizationId'));",
+              "  pm.expect(comment.taskId).to.eql(pm.collectionVariables.get('taskId'));",
+              "  pm.collectionVariables.set('commentId', comment._id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Update without content",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/{{commentId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: missing update content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Update with empty content",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":\"\"}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/{{commentId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: empty update content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Update with non-string content",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":{\"unexpected\":true}}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/{{commentId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: object update content is rejected with 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Update with JSON null body",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "null",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/{{commentId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: a null update body is rejected cleanly with 400, not 500', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Update valid comment with spoofed fields",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"{{updatedContent}}\",\n  \"authorId\": \"000000000000000000000001\",\n  \"organizationId\": \"000000000000000000000002\",\n  \"taskId\": \"000000000000000000000003\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/{{commentId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: content updates, relationship fields remain server-controlled', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const comment = pm.response.json().data;",
+              "  pm.expect(comment.content).to.eql(pm.collectionVariables.get('updatedContent'));",
+              "  pm.expect(comment.authorId).to.eql(pm.collectionVariables.get('ownerId'));",
+              "  pm.expect(comment.organizationId).to.eql(pm.collectionVariables.get('organizationId'));",
+              "  pm.expect(comment.taskId).to.eql(pm.collectionVariables.get('taskId'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Get comments for malformed task ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "url": "{{baseUrl}}/tasks/not-an-object-id/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: malformed task ID returns a clean 404', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Get comment with malformed comment ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/not-an-object-id"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: malformed comment ID returns a clean 404', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Update comment with malformed comment ID",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":\"attempt\"}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/not-an-object-id"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: malformed comment ID returns a clean 404', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 Get a well-formed but nonexistent comment ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/000000000000000000000099"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: unknown comment ID returns 404', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Delete the valid test comment",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments/{{commentId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: valid test comment is deleted with 200', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().data.deleted).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 List comments after cleanup",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{ownerToken}}", "type": "string" }
+          ]
+        },
+        "url": "{{baseUrl}}/tasks/{{taskId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected: seeded comments remain and temporary test comment is absent', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const comments = pm.response.json().data;",
+              "  pm.expect(comments.some(comment => comment._id === pm.collectionVariables.get('commentId'))).to.eql(false);",
+              "  pm.expect(comments.some(comment => comment.content === 'This comment remains after the contributor is removed.')).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

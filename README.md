@@ -1,10 +1,21 @@
 # WorkspaceHub
 
-WorkspaceHub is a project in TripleTen's AI Software Engineering program. It is a full-stack MERN application built with TypeScript on both the client and server. It supports multi-tenant organizations, role-based access, projects, tasks, bookings, and per-organization feature flags. 
+WorkspaceHub is a full-stack project and task tracker for teams, built with TypeScript on both the client and server. Each organization has its own members, roles, projects, tasks, comments, and bookings. Owners and admins can turn features on or off for their organization.
 
-Students are given this as starting code and, over the course of two sprints, accomplish a number of fixes, refactorings, and new features. The focus of these sprints is on safely and effectively using AI in an existing codebase.
+Live app: https://ai-se-project-workspacehub-2iqe-git-workspa-73b34f-codebase-013.vercel.app
 
-## Starting stack
+## Features
+
+- Sign up, log in, and stay signed in with JWT authentication
+- Organizations with owner, admin, and member roles that control who can manage what
+- Projects and tasks, with status, priority, assignee, and due date
+- Comments on tasks: members can add comments, edit or delete their own, and owners and admins can manage any comment
+- Bookings with start and end times that reject overlapping slots (enabled by the scheduling feature flag)
+- Per-organization feature flags that owners and admins can toggle
+- Form validation with clear error messages
+- Responsive layout with a collapsible header menu on small screens
+
+## Tech Stack
 
 - React + Vite + TypeScript
 - Tailwind CSS
@@ -12,6 +23,7 @@ Students are given this as starting code and, over the course of two sprints, ac
 - MongoDB + Mongoose
 - JWT authentication
 - Context API for client state
+- Vercel for hosting the client and server
 
 ## Project Structure
 
@@ -65,6 +77,18 @@ npm run seed
 npm run dev:server
 npm run dev:client
 ```
+
+## Environment Variables
+
+| Variable        | Used by | Required | Description                                                                                                                      |
+| --------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`          | server  | No       | Port for the local API server. Defaults to `5001`. Not needed on Vercel.                                                         |
+| `MONGODB_URI`   | server  | Yes      | MongoDB connection string: a local instance in development, MongoDB Atlas in production.                                         |
+| `JWT_SECRET`    | server  | Yes      | Secret used to sign and verify login tokens. Use a long random value in production.                                              |
+| `CLIENT_ORIGIN` | server  | Yes      | The frontend's origin allowed by CORS, with no trailing slash.                                                                   |
+| `VITE_API_URL`  | client  | No       | Base URL of the API, without `/api`. Defaults to `http://localhost:5001`. Baked in at build time, so redeploy after changing it. |
+
+In production, these values are set in each Vercel project's environment variables, never committed to the repository.
 
 ## Demo Users
 

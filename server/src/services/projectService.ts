@@ -3,7 +3,11 @@ import type { AuthPayload } from "../types/domain";
 import { AppError } from "../utils/appError";
 import { assertFound } from "../utils/scopedQuery";
 import { optionalString, requireStringLength } from "../utils/validators";
-import { canDeleteResource, canManageProject } from "./permissionService";
+import {
+  canDeleteResource,
+  canManageProject,
+  isPrivilegedRole,
+} from "./permissionService";
 
 export const listProjects = async (organizationId: string) => {
   return Project.find({ organizationId }).sort({ createdAt: -1 });
@@ -13,6 +17,10 @@ export const createProject = async (
   actor: AuthPayload,
   payload: Record<string, unknown>,
 ) => {
+  if (!isPrivilegedRole(actor.role)) {
+    throw new AppError("Only owners and admins can create projects", 403);
+  }
+
   const name = requireStringLength(payload.name, "Name", 2);
   const description = optionalString(payload.description) ?? "";
 
