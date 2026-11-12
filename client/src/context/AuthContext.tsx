@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -40,15 +41,15 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setOrganization(nextOrganization);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);
     setAuthToken(null);
     setToken(null);
     setUser(null);
     setOrganization(null);
-  };
+  }, []);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     if (!token) {
       logout();
       return;
@@ -58,7 +59,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     const session = await authService.me();
     setUser(session.user);
     setOrganization(session.organization);
-  };
+  }, [logout, token]);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -77,17 +78,17 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     };
 
     void hydrate();
-  }, []);
+  }, [logout, refreshSession, token]);
 
-  const login = async (payload: LoginPayload) => {
+  const login = useCallback(async (payload: LoginPayload) => {
     const session = await authService.login(payload);
     applySession(session.token, session.user, session.organization);
-  };
+  }, []);
 
-  const register = async (payload: RegisterPayload) => {
+  const register = useCallback(async (payload: RegisterPayload) => {
     const session = await authService.register(payload);
     applySession(session.token, session.user, session.organization);
-  };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -108,7 +109,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         return Boolean(organization?.featureFlags[featureKey]);
       },
     }),
-    [token, user, organization, loading],
+    [
+      token,
+      user,
+      organization,
+      loading,
+      login,
+      register,
+      logout,
+      refreshSession,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,9 @@
-import axios from "axios";
-import type { AxiosResponse } from "axios";
-import type { ApiResponse } from "../types/api";
+import axios, { type AxiosResponse } from "axios";
+
+type ApiEnvelope<T> = {
+  data: T;
+  message?: string;
+};
 
 const baseURL = `${import.meta.env.VITE_API_URL ?? "http://localhost:5001"}/api`;
 
@@ -19,21 +22,51 @@ export const setAuthToken = (token: string | null) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: unknown) => {
+    if (!axios.isAxiosError(error)) {
+      return Promise.reject(new Error("Request failed"));
+    }
+
+    const payload = error.response?.data as
+      | {
+          message?: string;
+          error?: { message?: string };
+        }
+      | undefined;
+
     const message =
-      error.response?.data?.error?.message ?? error.message ?? "Request failed";
+      payload?.error?.message ??
+      payload?.message ??
+      error.message ??
+      "Request failed";
+
     return Promise.reject(new Error(message));
   },
 );
 
 export const unwrapResponse = async <T>(
-  request: Promise<AxiosResponse<ApiResponse<T>>>,
-) => {
-  const response = await request;
+  request: Promise<AxiosResponse<ApiEnvelope<T>>>,
+): Promise<T> => {
+  try {
+    const response = await request;
+    return response.data.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const payload = error.response?.data as
+        | {
+            message?: string;
+          }
+        | undefined;
 
-  if (!response.data.success || response.data.data === null) {
-    throw new Error(response.data.error?.message ?? "Request failed");
+      const message = payload?.message ?? error.message ?? "Request failed";
+
+      throw new Error(message);
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error("Request failed");
   }
-
-  return response.data.data;
 };
