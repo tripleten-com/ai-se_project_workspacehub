@@ -18,6 +18,10 @@ export const FeatureFlagsPage = () => {
   const [status, setStatus] = useState<string | null>(null);
   const canEdit = isPrivilegedRole(user?.role);
 
+  const flagEntries = Object.entries(flags) as Array<
+    [keyof FeatureFlags, FeatureFlags[keyof FeatureFlags]]
+  >;
+
   const handleSave = async () => {
     setStatus(null);
 
@@ -44,21 +48,21 @@ export const FeatureFlagsPage = () => {
       />
       <div className="rounded-[20px] bg-white p-8 shadow-sm">
         <ul className="space-y-4">
-          {Object.entries(flags).map(([flagKey, enabled]) => (
+          {flagEntries.map(([flagKey, enabled]) => (
             <li
               className="flex items-center justify-between rounded-[12px] border border-slate-200 p-[18px]"
-              key={flagKey}
+              key={String(flagKey)}
             >
               <div>
                 <p className="text-xl font-semibold text-ink">
-                  {flagKey.replace(/([A-Z])/g, " $1")}
+                  {String(flagKey).replace(/([A-Z])/g, " $1")}
                 </p>
                 <p className="text-[13px] text-slate-500">
                   Toggle organization access for this feature area.
                 </p>
               </div>
               <Checkbox
-                checked={enabled}
+                checked={Boolean(enabled)}
                 disabled={!canEdit}
                 onChange={(checked) =>
                   setFlags((current) => ({

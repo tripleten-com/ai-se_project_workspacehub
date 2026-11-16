@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { StatusPanel } from "../components/StatusPanel";
 import { useAuth } from "../hooks/useAuth";
@@ -7,11 +7,8 @@ import { taskService } from "../services/taskService";
 import { userService } from "../services/userService";
 import type { Project, Task, User } from "../types/models";
 import { formatDateInput } from "../utils/date";
-import {
-  canDeleteResources,
-  canEditTask,
-  isPrivilegedRole,
-} from "../utils/permissions";
+import { canDeleteResources, canEditTask } from "../utils/permissions";
+import { isPrivilegedRole } from "../utils/permissions";
 
 interface TaskFormState {
   projectId: string;
@@ -30,7 +27,7 @@ const buildTaskFormState = (task: Task): TaskFormState => ({
   status: task.status,
   priority: task.priority,
   assignedTo: task.assignedTo ?? "",
-  dueDate: formatDateInput(task.dueDate),
+  dueDate: String(task.dueDate),
 });
 
 const selectClassName =
@@ -60,7 +57,7 @@ export const TasksPage = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [taskErrors, setTaskErrors] = useState<Record<string, string>>({});
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setCreateError(null);
 
@@ -91,11 +88,11 @@ export const TasksPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?._id]);
 
   useEffect(() => {
     void loadData();
-  }, [user?._id]);
+  }, [loadData]);
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -139,7 +136,15 @@ export const TasksPage = () => {
     setTaskEdits((current) => ({
       ...current,
       [taskId]: {
-        ...current[taskId],
+        ...(current[taskId] ?? {
+          projectId: "",
+          title: "",
+          description: "",
+          status: "todo",
+          priority: "medium",
+          assignedTo: "",
+          dueDate: "",
+        }),
         [field]: value,
       },
     }));
@@ -147,6 +152,14 @@ export const TasksPage = () => {
 
   const handleSaveTask = async (taskId: string) => {
     const formState = taskEdits[taskId];
+
+    if (!formState) {
+      setTaskErrors((current) => ({
+        ...current,
+        [taskId]: "Task form is unavailable.",
+      }));
+      return;
+    }
 
     try {
       const updatedTask = await taskService.update(taskId, {
@@ -189,6 +202,19 @@ export const TasksPage = () => {
     }
   };
 
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void handleCreate(event);
+  };
+
+  const handleSaveButtonClick = (taskId: string): void => {
+    void handleSaveTask(taskId);
+  };
+
+  const handleDeleteButtonClick = (taskId: string): void => {
+    void handleDeleteTask(taskId);
+  };
+
   if (loading) {
     return (
       <StatusPanel
@@ -207,7 +233,7 @@ export const TasksPage = () => {
       <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <form
           className="rounded-3xl bg-white p-6 shadow-sm"
-          onSubmit={handleCreate}
+          onSubmit={handleFormSubmit}
         >
           <h2 className="text-xl font-semibold text-ink">Create task</h2>
           <div className="mt-4 space-y-4">
@@ -228,6 +254,7 @@ export const TasksPage = () => {
                 </option>
               ))}
             </select>
+
             <input
               className="w-full rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 placeholder:text-[#94A3B880]"
               onChange={(event) =>
@@ -239,6 +266,7 @@ export const TasksPage = () => {
               placeholder="Task title"
               value={createState.title}
             />
+
             <textarea
               className="min-h-28 w-full rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 placeholder:text-[#94A3B880]"
               onChange={(event) =>
@@ -250,6 +278,7 @@ export const TasksPage = () => {
               placeholder="Task description"
               value={createState.description}
             />
+
             <div className="grid gap-4 md:grid-cols-2">
               <select
                 className={selectClassName}
@@ -266,6 +295,7 @@ export const TasksPage = () => {
                 <option value="in_progress">In progress</option>
                 <option value="done">Done</option>
               </select>
+
               <select
                 className={selectClassName}
                 onChange={(event) =>
@@ -282,6 +312,7 @@ export const TasksPage = () => {
                 <option value="high">High priority</option>
               </select>
             </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <select
                 className={`${selectClassName} disabled:bg-slate-100`}
@@ -309,6 +340,7 @@ export const TasksPage = () => {
                       ]
                     : null}
               </select>
+
               <input
                 className="rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3"
                 onChange={(event) =>
@@ -321,9 +353,11 @@ export const TasksPage = () => {
                 value={createState.dueDate}
               />
             </div>
+
             {createError ? (
               <p className="text-sm text-danger">{createError}</p>
             ) : null}
+
             <button
               className="rounded-[12px] bg-ink px-4 py-3 font-medium text-white transition hover:opacity-80 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
               type="submit"
@@ -332,6 +366,7 @@ export const TasksPage = () => {
             </button>
           </div>
         </form>
+
         {tasks.length ? (
           <ul className="space-y-4">
             {tasks.map((task) => {
@@ -350,6 +385,7 @@ export const TasksPage = () => {
                         }
                         value={formState?.title ?? task.title}
                       />
+
                       <textarea
                         className="min-h-24 rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 disabled:bg-slate-100 md:col-span-2"
                         disabled={!canEdit}
@@ -362,15 +398,12 @@ export const TasksPage = () => {
                         }
                         value={formState?.description ?? task.description}
                       />
+
                       <select
                         className={`${selectClassName} disabled:bg-slate-100`}
                         disabled={!canEdit}
                         onChange={(event) =>
-                          handleTaskEdit(
-                            task._id,
-                            "status",
-                            event.target.value,
-                          )
+                          handleTaskEdit(task._id, "status", event.target.value)
                         }
                         style={selectCaretStyle}
                         value={formState?.status ?? task.status}
@@ -379,6 +412,7 @@ export const TasksPage = () => {
                         <option value="in_progress">In progress</option>
                         <option value="done">Done</option>
                       </select>
+
                       <select
                         className={`${selectClassName} disabled:bg-slate-100`}
                         disabled={!canEdit}
@@ -396,6 +430,7 @@ export const TasksPage = () => {
                         <option value="medium">Medium priority</option>
                         <option value="high">High priority</option>
                       </select>
+
                       <select
                         className={`${selectClassName} disabled:bg-slate-100`}
                         disabled={!isPrivilegedRole(user?.role)}
@@ -416,6 +451,7 @@ export const TasksPage = () => {
                           </option>
                         ))}
                       </select>
+
                       <input
                         className="rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 disabled:bg-slate-100"
                         disabled={!canEdit}
@@ -432,24 +468,31 @@ export const TasksPage = () => {
                         }
                       />
                     </div>
+
                     {taskErrors[task._id] ? (
                       <p className="mt-4 text-sm text-danger">
                         {taskErrors[task._id]}
                       </p>
                     ) : null}
+
                     <div className="mt-4 flex flex-wrap gap-3">
                       <button
                         className="rounded-[10px] bg-ink px-4 py-2 text-sm font-medium text-white transition hover:opacity-80 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={!canEdit}
-                        onClick={() => void handleSaveTask(task._id)}
+                        onClick={() => {
+                          handleSaveButtonClick(task._id);
+                        }}
                         type="button"
                       >
                         Save
                       </button>
+
                       {canDeleteResources(user) ? (
                         <button
                           className="rounded-[10px] px-4 py-2 text-sm font-normal text-danger transition hover:bg-rose-50 active:opacity-70"
-                          onClick={() => void handleDeleteTask(task._id)}
+                          onClick={() => {
+                            handleDeleteButtonClick(task._id);
+                          }}
                           type="button"
                         >
                           Delete
