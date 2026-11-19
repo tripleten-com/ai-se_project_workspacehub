@@ -3,13 +3,15 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { StatusPanel } from "../components/StatusPanel";
 import { projectService } from "../services/projectService";
-import type { Project } from "../types/models";
+import { taskService } from "../services/taskService";
+import type { ProjectWithTaskCount } from "../types/models";
 import { useAuth } from "../hooks/useAuth";
 import { canDeleteResources } from "../utils/permissions";
+import { buildProjectWithTaskCount } from "../utils/projectMetrics";
 
 export const ProjectsPage = () => {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithTaskCount[]>([]);
   const [formState, setFormState] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -20,8 +22,14 @@ export const ProjectsPage = () => {
     setError(null);
 
     try {
-      const nextProjects = await projectService.list();
-      setProjects(nextProjects);
+      const [nextProjects, tasks] = await Promise.all([
+        projectService.list(),
+        taskService.list(),
+      ]);
+      const projectsWithTaskCounts = nextProjects.map((project) =>
+        buildProjectWithTaskCount(project, tasks)
+      );
+      setProjects(projectsWithTaskCounts);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Unable to load projects",
@@ -42,7 +50,10 @@ export const ProjectsPage = () => {
 
     try {
       const project = await projectService.create(formState);
-      setProjects((current) => [project, ...current]);
+      setProjects((current) => [
+        { ...project, taskCount: 0 },
+        ...current,
+      ]);
       setFormState({ name: "", description: "" });
     } catch (submitError) {
       setError(
@@ -133,6 +144,10 @@ export const ProjectsPage = () => {
                       </h2>
                       <p className="mt-2 text-sm text-slate-600">
                         {project.description}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        {project.taskCount}{" "}
+                        {project.taskCount === 1 ? "task" : "tasks"}
                       </p>
                     </div>
                     <div className="flex gap-2">
