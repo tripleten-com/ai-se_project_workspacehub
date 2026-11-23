@@ -15,28 +15,35 @@ export const ProjectsPage = () => {
   const [formState, setFormState] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadProjects = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
 
     try {
       const [nextProjects, tasks] = await Promise.all([
         projectService.list(),
         taskService.list(),
       ]);
+      setProjects([]); // Temporary change
+    
       const projectsWithTaskCounts = nextProjects.map((project) =>
         buildProjectWithTaskCount(project, tasks)
       );
       setProjects(projectsWithTaskCounts);
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Unable to load projects",
+    } catch (loadingError) {
+      setLoadError(
+        loadingError instanceof Error 
+          ? loadingError.message 
+          : "Unable to load projects",
       );
     } finally {
-      setLoading(false);
-    }
+       setTimeout(() => {
+        setLoading(false);
+    }, 1000);
+  }
   };
 
   useEffect(() => {
@@ -46,7 +53,7 @@ export const ProjectsPage = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
-    setError(null);
+    setActionError(null);
 
     try {
       const project = await projectService.create(formState);
@@ -56,10 +63,10 @@ export const ProjectsPage = () => {
       ]);
       setFormState({ name: "", description: "" });
     } catch (submitError) {
-      setError(
+      setActionError(
         submitError instanceof Error
           ? submitError.message
-          : "Unable to create project",
+          : "Unable to create project"
       );
     } finally {
       setSaving(false);
@@ -67,16 +74,17 @@ export const ProjectsPage = () => {
   };
 
   const handleDelete = async (projectId: string) => {
+    setActionError(null);
     try {
       await projectService.delete(projectId);
       setProjects((current) =>
-        current.filter((project) => project._id !== projectId),
+        current.filter((project) => project._id !== projectId)
       );
     } catch (deleteError) {
-      setError(
+      setActionError(
         deleteError instanceof Error
           ? deleteError.message
-          : "Unable to delete project",
+          : "Unable to delete project"
       );
     }
   };
@@ -85,6 +93,10 @@ export const ProjectsPage = () => {
     return (
       <StatusPanel title="Loading projects" message="Fetching project list." />
     );
+  }
+
+  if (loadError) {
+    return <StatusPanel title="Projects unavailable" message={loadError} />;
   }
 
   return (
@@ -122,7 +134,9 @@ export const ProjectsPage = () => {
               placeholder="Description"
               value={formState.description}
             />
-            {error ? <p className="text-sm text-danger">{error}</p> : null}
+            {actionError ? (
+              <p className="text-sm text-danger">{actionError}</p>
+            ) : null}
             <button
               className="rounded-[12px] bg-ink px-4 py-3 font-medium text-white transition hover:opacity-80 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={saving}

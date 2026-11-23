@@ -222,6 +222,37 @@ export const DashboardPage = () => {
               </p>
             )}
           </div>
+          <div className="rounded-[20px] bg-white p-8 shadow-sm">
+            <h2 className="text-xl font-bold text-ink">Members</h2>
+            {data.users.length ? (
+              <ul className="mt-4 space-y-3">
+                {data.users.slice(0, 4).map((member) => (
+                  <li
+                    className="rounded-2xl border border-slate-200 px-4 py-3"
+                    key={member._id}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-ink">
+                          {member.firstName} {member.lastName}
+                        </p>
+                        <p className="truncate text-sm text-slate-500">
+                          {member.email}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-[6px] bg-panel px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-ink">
+                        {member.role}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-slate-500">
+                No members found for this organization.
+              </p>
+            )}
+          </div>
         </div>
       </section>
     </div>

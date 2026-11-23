@@ -38,6 +38,12 @@ export const BookingsPage = () => {
   const [bookingErrors, setBookingErrors] = useState<Record<string, string>>(
     {},
   );
+  const [createTouched, setCreateTouched] = useState<
+    Partial<Record<keyof BookingFormState, boolean>>
+  >({});
+  const [bookingTouched, setBookingTouched] = useState<
+    Record<string, Partial<Record<keyof BookingFormState, boolean>>>
+  >({});
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -74,8 +80,54 @@ export const BookingsPage = () => {
     void loadBookings();
   }, [isFeatureEnabled]);
 
+  const getBookingErrors = (
+    formState: BookingFormState,
+  ): Partial<Record<keyof BookingFormState, string>> => {
+    const errors: Partial<Record<keyof BookingFormState, string>> = {};
+
+    if (formState.title.trim().length < 2) {
+      errors.title = "Title must be at least 2 characters";
+    }
+
+    if (!formState.startsAt) {
+      errors.startsAt = "Start time is required";
+    } else if (Number.isNaN(new Date(formState.startsAt).getTime())) {
+      errors.startsAt = "Start time must be a valid date";
+    }
+
+    if (!formState.endsAt) {
+      errors.endsAt = "End time is required";
+    } else if (Number.isNaN(new Date(formState.endsAt).getTime())) {
+      errors.endsAt = "End time must be a valid date";
+    } else {
+      const startsAt = new Date(formState.startsAt);
+      const endsAt = new Date(formState.endsAt);
+
+      if (
+        !Number.isNaN(startsAt.getTime()) &&
+        endsAt.getTime() <= startsAt.getTime()
+      ) {
+        errors.endsAt = "End time must be after start time";
+      }
+    }
+
+    return errors;
+  };
+
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setCreateError(null);
+
+    const validationError = getBookingErrors(createState);
+
+    if (Object.keys(validationError).length) {
+      setCreateTouched({
+        title: true,
+        startsAt: true,
+        endsAt: true,
+      });
+      return;
+    }
 
     try {
       const booking = await bookingService.create(createState);
@@ -94,6 +146,7 @@ export const BookingsPage = () => {
         startsAt: "",
         endsAt: "",
       });
+      setCreateTouched({});
       setCreateError(null);
     } catch (createError) {
       setCreateError(
@@ -109,6 +162,10 @@ export const BookingsPage = () => {
     field: keyof BookingFormState,
     value: string,
   ) => {
+    setBookingErrors((current) => ({
+      ...current,
+      [bookingId]: "",
+    }));
     setBookingEdits((current) => ({
       ...current,
       [bookingId]: {
@@ -119,11 +176,33 @@ export const BookingsPage = () => {
   };
 
   const handleSave = async (bookingId: string) => {
+    setBookingErrors((current) => ({ ...current, [bookingId]: "" }));
+    const formState = bookingEdits[bookingId];
+
+    if (!formState) {
+      setBookingErrors((current) => ({
+        ...current,
+        [bookingId]: "Unable to load this booking form",
+      }));
+      return;
+    }
+
+    const validationError = getBookingErrors(formState);
+
+    if (Object.keys(validationError).length) {
+      setBookingTouched((current) => ({
+        ...current,
+        [bookingId]: {
+          title: true,
+          startsAt: true,
+          endsAt: true,
+        },
+      }));
+      return;
+    }
+
     try {
-      const updatedBooking = await bookingService.update(
-        bookingId,
-        bookingEdits[bookingId],
-      );
+      const updatedBooking = await bookingService.update(bookingId, formState);
       setBookings((current) =>
         current.map((booking) =>
           booking._id === bookingId ? updatedBooking : booking,
@@ -132,6 +211,10 @@ export const BookingsPage = () => {
       setBookingEdits((current) => ({
         ...current,
         [bookingId]: buildBookingFormState(updatedBooking),
+      }));
+      setBookingTouched((current) => ({
+        ...current,
+        [bookingId]: {},
       }));
       setBookingErrors((current) => ({ ...current, [bookingId]: "" }));
     } catch (saveError) {
@@ -146,11 +229,18 @@ export const BookingsPage = () => {
   };
 
   const handleDelete = async (bookingId: string) => {
+    setBookingErrors((current) => ({ ...current, [bookingId]: "" }));
+
     try {
       await bookingService.delete(bookingId);
       setBookings((current) =>
         current.filter((booking) => booking._id !== bookingId),
       );
+      setBookingErrors((current) => {
+        const next = { ...current };
+        delete next[bookingId];
+        return next;
+      });
     } catch (deleteError) {
       setBookingErrors((current) => ({
         ...current,
@@ -180,6 +270,8 @@ export const BookingsPage = () => {
     );
   }
 
+  const createErrors = getBookingErrors(createState);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -201,9 +293,18 @@ export const BookingsPage = () => {
                   title: event.target.value,
                 }))
               }
+              onBlur={() =>
+                setCreateTouched((current) => ({
+                  ...current,
+                  title: true,
+                }))
+              }
               placeholder="Booking title"
               value={createState.title}
             />
+            {createTouched.title && createErrors.title ? (
+              <p className="text-sm text-danger">{createErrors.title}</p>
+            ) : null}
             <textarea
               className="min-h-28 w-full rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 placeholder:text-[#94A3B880]"
               onChange={(event) =>
@@ -223,9 +324,20 @@ export const BookingsPage = () => {
                   startsAt: event.target.value,
                 }))
               }
+              onBlur={() =>
+                setCreateTouched((current) => ({
+                  ...current,
+                  startsAt: true,
+                }))
+              }
               type="datetime-local"
               value={createState.startsAt}
             />
+            {createTouched.startsAt && createErrors.startsAt ? (
+              <p className="text-sm text-danger">
+                {createErrors.startsAt}
+              </p>
+            ) : null}
             <input
               className="w-full rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3"
               onChange={(event) =>
@@ -234,9 +346,18 @@ export const BookingsPage = () => {
                   endsAt: event.target.value,
                 }))
               }
+              onBlur={() =>
+                setCreateTouched((current) => ({
+                  ...current,
+                  endsAt: true,
+                }))
+              }
               type="datetime-local"
               value={createState.endsAt}
             />
+            {createTouched.endsAt && createErrors.endsAt ? (
+              <p className="text-sm text-danger">{createErrors.endsAt}</p>
+            ) : null}
             {createError ? (
               <p className="text-sm text-danger">{createError}</p>
             ) : null}
@@ -253,6 +374,9 @@ export const BookingsPage = () => {
             {bookings.map((booking) => {
               const canEdit = canEditBooking(user, booking);
               const formState = bookingEdits[booking._id];
+              const editErrors = formState
+                ? getBookingErrors(formState)
+                : {};
 
               return (
                 <li key={booking._id}>
@@ -264,8 +388,22 @@ export const BookingsPage = () => {
                         onChange={(event) =>
                           handleEdit(booking._id, "title", event.target.value)
                         }
+                        onBlur={() =>
+                          setBookingTouched((current) => ({
+                            ...current,
+                            [booking._id]: {
+                              ...current[booking._id],
+                              title: true,
+                            },
+                          }))
+                        }
                         value={formState?.title ?? booking.title}
                       />
+                      {bookingTouched[booking._id]?.title && editErrors.title ? (
+                        <p className="text-sm text-danger md:col-span-2">
+                          {editErrors.title}
+                        </p>
+                      ) : null}
                       <textarea
                         className="min-h-24 rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 disabled:bg-slate-100 md:col-span-2"
                         disabled={!canEdit}
@@ -288,17 +426,41 @@ export const BookingsPage = () => {
                             event.target.value,
                           )
                         }
+                        onBlur={() =>
+                          setBookingTouched((current) => ({
+                            ...current,
+                            [booking._id]: {
+                              ...current[booking._id],
+                              startsAt: true,
+                            },
+                          }))
+                        }
                         type="datetime-local"
                         value={
                           formState?.startsAt ??
                           formatDateTimeInput(booking.startsAt)
                         }
                       />
+                      {bookingTouched[booking._id]?.startsAt &&
+                      editErrors.startsAt ? (
+                        <p className="text-sm text-danger">
+                          {editErrors.startsAt}
+                        </p>
+                      ) : null}
                       <input
                         className="rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3 disabled:bg-slate-100"
                         disabled={!canEdit}
                         onChange={(event) =>
                           handleEdit(booking._id, "endsAt", event.target.value)
+                        }
+                        onBlur={() =>
+                          setBookingTouched((current) => ({
+                            ...current,
+                            [booking._id]: {
+                              ...current[booking._id],
+                              endsAt: true,
+                            },
+                          }))
                         }
                         type="datetime-local"
                         value={
