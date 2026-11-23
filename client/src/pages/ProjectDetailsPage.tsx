@@ -193,9 +193,7 @@ export const ProjectDetailsPage = () => {
                     <article className="rounded-2xl border border-slate-200 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="font-medium text-ink">
-                            {task.title}
-                          </h3>
+                          <h3 className="font-medium text-ink">{task.title}</h3>
                           <p className="mt-1 text-sm text-slate-500">
                             {task.description}
                           </p>

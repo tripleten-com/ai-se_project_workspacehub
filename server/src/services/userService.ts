@@ -14,6 +14,7 @@ export const listUsers = async (organizationId: string) => {
 export const getUserById = async (organizationId: string, id: string) => {
   const found = await User.findOne({ _id: id, organizationId });
   const user = assertFound(found, "User");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { passwordHash: _passwordHash, ...userObject } = user.toObject();
   return userObject;
 };
@@ -52,6 +53,7 @@ export const updateUser = async (
   }
 
   await user.save();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { passwordHash: _passwordHash, ...userObject } = user.toObject();
   return userObject;
 };
