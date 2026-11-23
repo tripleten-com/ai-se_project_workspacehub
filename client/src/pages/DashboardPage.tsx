@@ -9,7 +9,7 @@ import { taskService } from "../services/taskService";
 import { userService } from "../services/userService";
 import { useAuth } from "../hooks/useAuth";
 import type { Booking, Project, Task, User } from "../types/models";
-import { formatDateInput, formatDateTime } from "../utils/date";
+import { formatDateTime } from "../utils/date";
 
 interface DashboardData {
   projects: Project[];
@@ -143,9 +143,7 @@ export const DashboardPage = () => {
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <h3 className="font-semibold text-ink">
-                          {task.title}
-                        </h3>
+                        <h3 className="font-semibold text-ink">{task.title}</h3>
                         <p className="text-[13px] text-slate-500">
                           Due {formatDateTime(task.dueDate)}
                         </p>
@@ -200,9 +198,7 @@ export const DashboardPage = () => {
                         className="rounded-2xl border border-slate-200 px-4 py-3"
                         key={booking._id}
                       >
-                        <p className="font-medium text-ink">
-                          {booking.title}
-                        </p>
+                        <p className="font-medium text-ink">{booking.title}</p>
                         <p className="text-sm text-slate-500">
                           {formatDateTime(booking.startsAt)} to{" "}
                           {formatDateTime(booking.endsAt)}

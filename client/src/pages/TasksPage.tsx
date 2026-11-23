@@ -366,11 +366,7 @@ export const TasksPage = () => {
                         className={`${selectClassName} disabled:bg-slate-100`}
                         disabled={!canEdit}
                         onChange={(event) =>
-                          handleTaskEdit(
-                            task._id,
-                            "status",
-                            event.target.value,
-                          )
+                          handleTaskEdit(task._id, "status", event.target.value)
                         }
                         style={selectCaretStyle}
                         value={formState?.status ?? task.status}

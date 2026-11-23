@@ -334,9 +334,7 @@ export const BookingsPage = () => {
               value={createState.startsAt}
             />
             {createTouched.startsAt && createErrors.startsAt ? (
-              <p className="text-sm text-danger">
-                {createErrors.startsAt}
-              </p>
+              <p className="text-sm text-danger">{createErrors.startsAt}</p>
             ) : null}
             <input
               className="w-full rounded-2xl border border-slate-200 transition hover:border-slate-300 px-4 py-3"
@@ -374,9 +372,7 @@ export const BookingsPage = () => {
             {bookings.map((booking) => {
               const canEdit = canEditBooking(user, booking);
               const formState = bookingEdits[booking._id];
-              const editErrors = formState
-                ? getBookingErrors(formState)
-                : {};
+              const editErrors = formState ? getBookingErrors(formState) : {};
 
               return (
                 <li key={booking._id}>
@@ -399,7 +395,8 @@ export const BookingsPage = () => {
                         }
                         value={formState?.title ?? booking.title}
                       />
-                      {bookingTouched[booking._id]?.title && editErrors.title ? (
+                      {bookingTouched[booking._id]?.title &&
+                      editErrors.title ? (
                         <p className="text-sm text-danger md:col-span-2">
                           {editErrors.title}
                         </p>

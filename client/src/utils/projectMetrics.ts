@@ -1,12 +1,8 @@
-import type {
-  Project,
-  ProjectWithTaskCount,
-  Task,
-} from "../types/models";
+import type { Project, ProjectWithTaskCount, Task } from "../types/models";
 
 export const buildProjectWithTaskCount = (
   project: Project,
-  tasks: Task[]
+  tasks: Task[],
 ): ProjectWithTaskCount => {
   const taskCountsByProjectId = new Map<string, number>();
 
@@ -17,6 +13,5 @@ export const buildProjectWithTaskCount = (
     );
   }
 
-  return { ...project, taskCount: taskCountsByProjectId.get(project._id) ?? 0,
-  };
+  return { ...project, taskCount: taskCountsByProjectId.get(project._id) ?? 0 };
 };
